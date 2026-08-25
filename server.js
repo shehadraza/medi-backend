@@ -13,9 +13,9 @@ const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
 });
 
-// =====================================================
+// ===============================
 // TEST
-// =====================================================
+// ===============================
 
 app.get("/", (req, res) => {
   res.json({
@@ -23,9 +23,9 @@ app.get("/", (req, res) => {
   });
 });
 
-// =====================================================
+// ===============================
 // AI CHAT
-// =====================================================
+// ===============================
 
 app.post("/chat", async (req, res) => {
   try {
@@ -37,8 +37,6 @@ app.post("/chat", async (req, res) => {
       });
     }
 
-    console.log("User message:", message);
-
     const response = await client.chat.completions.create({
       model: "openai/gpt-4o",
       max_tokens: 1000,
@@ -49,9 +47,8 @@ app.post("/chat", async (req, res) => {
             "You are MEDI AI, a helpful health information assistant. " +
             "Give general health information only. " +
             "Do not diagnose diseases or claim certainty about a medical condition. " +
-            "Help the user understand which type of healthcare professional may be appropriate. " +
             "If symptoms are severe or an emergency, advise the user to seek immediate professional medical care. " +
-            "You can respond in English, Bangla, or Banglish depending on the user's language.",
+            "Respond in English.",
         },
         {
           role: "user",
@@ -60,33 +57,29 @@ app.post("/chat", async (req, res) => {
       ],
     });
 
-    const reply = response.choices?.[0]?.message?.content;
+    const reply =
+        response.choices?.[0]?.message?.content;
 
     if (!reply) {
       throw new Error("AI returned an empty response");
     }
 
-    console.log("AI reply received");
-
     res.json({
       reply: reply,
     });
   } catch (error) {
-    console.error("OPENROUTER ERROR:");
-    console.error(error);
-    console.error("STATUS:", error?.status);
-    console.error("MESSAGE:", error?.message);
+    console.error("CHAT ERROR:", error);
 
     res.status(500).json({
       error: "AI response failed",
-      details: error?.message || "Unknown AI error",
+      details: error?.message || "Unknown error",
     });
   }
 });
 
-// =====================================================
-// PRESCRIPTION AI ANALYSIS
-// =====================================================
+// ===============================
+// PRESCRIPTION AI
+// ===============================
 
 app.post("/prescription", async (req, res) => {
   try {
@@ -101,47 +94,59 @@ app.post("/prescription", async (req, res) => {
     console.log("Prescription OCR text:");
     console.log(text);
 
-    const response = await client.chat.completions.create({
+    const response =
+        await client.chat.completions.create({
       model: "openai/gpt-4o",
       max_tokens: 1500,
+
       messages: [
         {
           role: "system",
           content: `
 You are MEDI AI, a prescription information assistant.
 
-The user will provide OCR text extracted from a doctor's prescription.
+Analyze the OCR text from a medical prescription.
 
-Your job is to identify medicines that are clearly present in the prescription and provide general information about them.
+For every medicine you can identify, provide:
 
-Return ONLY valid JSON.
+1. Medicine name
+2. What the medicine is commonly used for
+3. Dosage if clearly available
+4. How/when it is commonly taken if clearly available
+5. Approximate medicine price in Bangladesh if you have reliable knowledge
 
-Use exactly this structure:
+IMPORTANT:
+- Do not invent medicine names.
+- Do not invent dosage.
+- Do not invent prices.
+- If information is uncertain, clearly say "Not available" or "Unclear".
+- Do not diagnose the patient.
+- Do not change the doctor's prescription.
+- Tell the user to confirm medicine, dosage and price with a pharmacist/doctor.
+- Return a simple, human-friendly answer.
+- Do not mention that you are an AI unless necessary.
+- Respond in English.
 
-{
-  "medicines": [
-    {
-      "name": "Medicine name",
-      "dosage": "Dosage",
-      "purpose": "General purpose of the medicine",
-      "price": "Estimated price"
-    }
-  ]
-}
+Format the answer like this:
 
-IMPORTANT RULES:
+Medicine 1:
+Name: ...
+Used for: ...
+Dosage: ...
+How to take: ...
+Approximate price: ...
 
-1. Do not invent medicine names.
-2. Only include medicines that appear reasonably identifiable in the OCR text.
-3. If a medicine name is unclear, use "Unknown" instead of guessing.
-4. Do not diagnose the patient's disease.
-5. "purpose" must describe the general use of the medicine.
-6. Price must be an estimate only.
-7. If the price is unknown, write "Price unavailable".
-8. Do not provide dangerous or personalized medical instructions.
-9. Do not change the prescribed dosage.
-10. Keep the answer simple and easy to understand.
-11. Return JSON only. Do not add markdown.
+Medicine 2:
+Name: ...
+Used for: ...
+Dosage: ...
+How to take: ...
+Approximate price: ...
+
+At the end write:
+
+Important:
+Please verify the medicine name and dosage with a qualified doctor or pharmacist before taking it.
           `,
         },
         {
@@ -151,57 +156,36 @@ IMPORTANT RULES:
       ],
     });
 
-    let reply = response.choices?.[0]?.message?.content;
+    const result =
+        response.choices?.[0]?.message?.content;
 
-    if (!reply) {
-      throw new Error("AI returned an empty response");
-    }
-
-    console.log("Prescription AI response:");
-    console.log(reply);
-
-    // Remove markdown code fences if AI adds them
-    reply = reply
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "")
-      .trim();
-
-    // Check whether returned text is valid JSON
-    let parsedResult;
-
-    try {
-      parsedResult = JSON.parse(reply);
-    } catch (jsonError) {
-      console.error("INVALID AI JSON:");
-      console.error(reply);
-
+    if (!result) {
       throw new Error(
-        "AI returned an invalid prescription result"
+        "AI returned an empty prescription result"
       );
     }
 
+    console.log("Prescription AI result received");
+
     res.json({
-      success: true,
-      result: parsedResult,
+      result: result,
     });
   } catch (error) {
-    console.error("PRESCRIPTION AI ERROR:");
+    console.error("PRESCRIPTION ERROR:");
     console.error(error);
-    console.error("STATUS:", error?.status);
-    console.error("MESSAGE:", error?.message);
 
     res.status(500).json({
-      success: false,
       error: "Prescription analysis failed",
-      details: error?.message || "Unknown error",
+      details:
+          error?.message ||
+          "Unknown error",
     });
   }
 });
 
-// =====================================================
-// SERVER
-// =====================================================
+// ===============================
+// START SERVER
+// ===============================
 
 const PORT = process.env.PORT || 3000;
 
