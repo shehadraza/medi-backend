@@ -1,0 +1,23 @@
+[
+  {
+    "id": "doctor-001",
+    "name": "Dr. Ahmed Rahman",
+    "nameBn": "ডা. আহমেদ রহমান",
+    "specialty": "Cardiologist",
+    "specialtyBn": "কার্ডিওলজিস্ট",
+    "qualification": "MBBS, FCPS, MD",
+    "experience": "12 years",
+    "hospital": "Sample Medical Center",
+    "chamber": "Chattogram",
+    "division": "Chattogram",
+    "district": "Chattogram",
+    "upazila": "Kotwali",
+    "visitingDays": "Sat - Thu",
+    "visitingTime": "5:00 PM - 9:00 PM",
+    "phone": "",
+    "rating": null,
+    "reviewCount": 0,
+    "photo": "",
+    "verified": false
+  }
+]
